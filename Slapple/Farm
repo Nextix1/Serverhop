@@ -13,7 +13,7 @@ local TargetItemName = "Glove"
 local QueueTeleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
 
 if QueueTeleport then
-    local ScriptSource = "INSERT_YOUR_RAW_SCRIPT_URL_HERE"
+    local ScriptSource = "https://raw.githubusercontent.com/Nextix1/Serverhop/refs/heads/main/Slapple/Farm"
     QueueTeleport("loadstring(game:HttpGet('" .. ScriptSource .. "'))()")
 end
 
