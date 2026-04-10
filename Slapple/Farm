@@ -11,10 +11,9 @@ local TargetFolder = "Slapples"
 local TargetItem = "Glove"
 local ScriptUrl = "https://raw.githubusercontent.com/Nextix1/Serverhop/refs/heads/main/Slapple/Farm"
 
-local TeleportQueue = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
-
-if TeleportQueue and ScriptUrl ~= "https://raw.githubusercontent.com/Nextix1/Serverhop/refs/heads/main/Slapple/Farm" then
-    TeleportQueue("loadstring(game:HttpGet('" .. ScriptUrl .. "'))()")
+local function GetQueueFunction()
+    local func = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (executor and executor.queue_on_teleport)
+    return func
 end
 
 if not game:IsLoaded() then
@@ -43,27 +42,33 @@ for _, obj in ipairs(ItemContainer:GetDescendants()) do
 end
 
 local ApiUrl = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-local ServerData = HttpService:JSONDecode(game:HttpGetAsync(ApiUrl)).data
+local RawResponse = game:HttpGetAsync(ApiUrl)
+local ServerData = HttpService:JSONDecode(RawResponse).data
 
-local TargetServerId = nil
+local BestServer = nil
 local LowestPlayers = math.huge
 
 for _, server in ipairs(ServerData) do
     if type(server) == "table" and server.id ~= JobId then
-        local currentPlayers = tonumber(server.playing)
-        local maxPlayers = tonumber(server.maxPlayers)
-        
-        if currentPlayers and maxPlayers and currentPlayers < maxPlayers then
-            if currentPlayers < LowestPlayers then
-                LowestPlayers = currentPlayers
-                TargetServerId = server.id
+        local pCount = tonumber(server.playing)
+        local pMax = tonumber(server.maxPlayers)
+        if pCount and pMax and pCount < pMax then
+            if pCount < LowestPlayers then
+                LowestPlayers = pCount
+                BestServer = server.id
             end
         end
     end
 end
 
-if TargetServerId then
-    TeleportService:TeleportToPlaceInstance(PlaceId, TargetServerId, LocalPlayer)
+if BestServer then
+    local Queue = GetQueueFunction()
+    if Queue and ScriptUrl ~= "https://raw.githubusercontent.com/Nextix1/Serverhop/refs/heads/main/Slapple/Farm" then
+        Queue([[loadstring(game:HttpGet("]] .. ScriptUrl .. [["))()]])
+    end
+    pcall(function()
+        TeleportService:TeleportToPlaceInstance(PlaceId, BestServer, LocalPlayer)
+    end)
 else
-    error("No available servers found")
+    error("No servers found")
 end
