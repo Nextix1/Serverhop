@@ -1,0 +1,70 @@
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local PlaceId = game.PlaceId
+local JobId = game.JobId
+
+local TargetIslandName = "island5"
+local TargetFolderName = "Slapples"
+local TargetItemName = "Glove"
+
+local QueueTeleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+
+if QueueTeleport then
+    local ScriptSource = "INSERT_YOUR_RAW_SCRIPT_URL_HERE"
+    QueueTeleport("loadstring(game:HttpGet('" .. ScriptSource .. "'))()")
+end
+
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+repeat task.wait() until LocalPlayer.Character ~= nil and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+local Character = LocalPlayer.Character
+local RootPart = Character.HumanoidRootPart
+
+if Character:FindFirstChild("entered") == nil then
+    repeat task.wait()
+        firetouchinterest(RootPart, workspace.Lobby.Teleport1, 0)
+        firetouchinterest(RootPart, workspace.Lobby.Teleport1, 1)
+    until Character:FindFirstChild("entered")
+end
+
+local TargetFolder = workspace.Arena[TargetIslandName][TargetFolderName]
+
+for _, item in ipairs(TargetFolder:GetDescendants()) do
+    if item.Name == TargetItemName and item:FindFirstChildWhichIsA("TouchTransmitter") then
+        firetouchinterest(RootPart, item, 0)
+        firetouchinterest(RootPart, item, 1)
+    end
+end
+
+local ServerListUrl = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+local RawData = game:HttpGetAsync(ServerListUrl)
+local ParsedData = HttpService:JSONDecode(RawData).data
+
+local BestServerId = nil
+local MinPlayers = math.huge
+
+for _, server in ipairs(ParsedData) do
+    if type(server) == "table" and server.id ~= JobId then
+        local playerCount = tonumber(server.playing)
+        local maxCount = tonumber(server.maxPlayers)
+        
+        if playerCount and maxCount and playerCount < maxCount then
+            if playerCount < MinPlayers then
+                MinPlayers = playerCount
+                BestServerId = server.id
+            end
+        end
+    end
+end
+
+if BestServerId then
+    TeleportService:TeleportToPlaceInstance(PlaceId, BestServerId, LocalPlayer)
+else
+    error("No suitable server found")
+end
