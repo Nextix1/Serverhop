@@ -6,65 +6,64 @@ local LocalPlayer = Players.LocalPlayer
 local PlaceId = game.PlaceId
 local JobId = game.JobId
 
-local TargetIslandName = "island5"
-local TargetFolderName = "Slapples"
-local TargetItemName = "Glove"
+local TargetIsland = "island5"
+local TargetFolder = "Slapples"
+local TargetItem = "Glove"
+local ScriptUrl = "https://raw.githubusercontent.com/Nextix1/Serverhop/refs/heads/main/Slapple/Farm"
 
-local QueueTeleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+local TeleportQueue = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
 
-if QueueTeleport then
-    local ScriptSource = "https://raw.githubusercontent.com/Nextix1/Serverhop/refs/heads/main/Slapple/Farm"
-    QueueTeleport("loadstring(game:HttpGet('" .. ScriptSource .. "'))()")
+if TeleportQueue and ScriptUrl ~= "https://raw.githubusercontent.com/Nextix1/Serverhop/refs/heads/main/Slapple/Farm" then
+    TeleportQueue("loadstring(game:HttpGet('" .. ScriptUrl .. "'))()")
 end
 
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-repeat task.wait() until LocalPlayer.Character ~= nil and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+repeat task.wait() until LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
 local Character = LocalPlayer.Character
 local RootPart = Character.HumanoidRootPart
 
-if Character:FindFirstChild("entered") == nil then
+if not Character:FindFirstChild("entered") then
     repeat task.wait()
         firetouchinterest(RootPart, workspace.Lobby.Teleport1, 0)
         firetouchinterest(RootPart, workspace.Lobby.Teleport1, 1)
     until Character:FindFirstChild("entered")
 end
 
-local TargetFolder = workspace.Arena[TargetIslandName][TargetFolderName]
+local ItemContainer = workspace.Arena[TargetIsland][TargetFolder]
 
-for _, item in ipairs(TargetFolder:GetDescendants()) do
-    if item.Name == TargetItemName and item:FindFirstChildWhichIsA("TouchTransmitter") then
-        firetouchinterest(RootPart, item, 0)
-        firetouchinterest(RootPart, item, 1)
+for _, obj in ipairs(ItemContainer:GetDescendants()) do
+    if obj.Name == TargetItem and obj:FindFirstChildWhichIsA("TouchTransmitter") then
+        firetouchinterest(RootPart, obj, 0)
+        firetouchinterest(RootPart, obj, 1)
     end
 end
 
-local ServerListUrl = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-local RawData = game:HttpGetAsync(ServerListUrl)
-local ParsedData = HttpService:JSONDecode(RawData).data
+local ApiUrl = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+local ServerData = HttpService:JSONDecode(game:HttpGetAsync(ApiUrl)).data
 
-local BestServerId = nil
-local MinPlayers = math.huge
+local TargetServerId = nil
+local LowestPlayers = math.huge
 
-for _, server in ipairs(ParsedData) do
+for _, server in ipairs(ServerData) do
     if type(server) == "table" and server.id ~= JobId then
-        local playerCount = tonumber(server.playing)
-        local maxCount = tonumber(server.maxPlayers)
+        local currentPlayers = tonumber(server.playing)
+        local maxPlayers = tonumber(server.maxPlayers)
         
-        if playerCount and maxCount and playerCount < maxCount then
-            if playerCount < MinPlayers then
-                MinPlayers = playerCount
-                BestServerId = server.id
+        if currentPlayers and maxPlayers and currentPlayers < maxPlayers then
+            if currentPlayers < LowestPlayers then
+                LowestPlayers = currentPlayers
+                TargetServerId = server.id
             end
         end
     end
 end
 
-if BestServerId then
-    TeleportService:TeleportToPlaceInstance(PlaceId, BestServerId, LocalPlayer)
+if TargetServerId then
+    TeleportService:TeleportToPlaceInstance(PlaceId, TargetServerId, LocalPlayer)
 else
-    error("No suitable server found")
+    error("No available servers found")
 end
